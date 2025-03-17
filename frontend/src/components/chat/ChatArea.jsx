@@ -46,7 +46,6 @@ const ChatArea = () => {
 
     const handleMessageReceive = (message) => {
       setMessages((prev) => [...prev, { ...message, newMessage: true }]);
-      // Scroll to bottom when a new message is received
     };
 
     socket.on("receive-message", handleMessageReceive);
@@ -56,6 +55,31 @@ const ChatArea = () => {
     };
   }, []);
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (text === "") return;
+
+    const message = {
+      username: user.username,
+      content: text,
+      channelId: "general", // Make this dynamic
+    };
+    
+    // Send message to the server
+    async function postMessage() {
+      try {
+        const res = await axios.post("http://localhost:5000/api/messages", message);
+        socket.emit('send-message', res.data); // Emit the message after successful post to DB
+        setText("");
+        btnChangeColor(false);
+      } catch (error) {
+        console.error("Error in posting message: ", error);
+      }
+    }
+    postMessage();
+  }
+
+  // Style management funtions
   useEffect(() => {
     setTimeout(() => {
       const viewport = document.querySelector("[data-radix-scroll-area-viewport]");
@@ -65,6 +89,11 @@ const ChatArea = () => {
     }, 100);
   }, [messages]);
 
+  const handleChange = (e) => {
+    setText(e.target.value);
+    btnChangeColor(e.target.value);
+  }
+
   const btnChangeColor = (yeorne) => {
     if (yeorne) {
       sendbtn.current.classList.add('text-gray-200');
@@ -73,33 +102,6 @@ const ChatArea = () => {
       sendbtn.current.classList.remove('text-gray-200');
       sendbtn.current.classList.remove('bg-indigo-500');
     }
-  }
-
-  const handleChange = (e) => {
-    setText(e.target.value);
-    btnChangeColor(e.target.value);
-  }
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (text === "") return;
-
-    const message = {
-      username: user.username,
-      content: text,
-    };
-    
-    async function postMessage() {
-      try {
-        const res = await axios.post("http://localhost:5000/api/messages", message);
-        socket.emit('send-message', res.data); // Emit the message after successful post
-        setText("");
-        btnChangeColor(false);
-      } catch (error) {
-        console.error("Error in posting message: ", error);
-      }
-    }
-    postMessage();
   }
 
   return (
