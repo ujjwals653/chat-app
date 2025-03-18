@@ -1,11 +1,7 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-dotenv.config();
-const { MONGODB_URI } = process.env;
-console.log(MONGODB_URI);
 
 export const connectDB = () => {
-    mongoose.connect("mongodb+srv://ujjwals653:_Xvghk971273512@biscordmessages.8yxlg.mongodb.net/?retryWrites=true&w=majority&appName=BiscordMessages", {
+    mongoose.connect(process.env.MONGO_URI, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
     })
