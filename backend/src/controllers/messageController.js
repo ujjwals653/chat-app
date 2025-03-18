@@ -3,6 +3,12 @@ import Message from '../models/Message.js';
 export const sendMessage = async (req, res) => {
     try {
         const { username, content, channelId, isAnonymous } = req.body;
+
+        // Validate required fields
+        if (!username || !content || !channelId) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+
         const message = new Message({ username, content, channelId, isAnonymous });
         // Save the message to the database
         await message.save();

@@ -61,16 +61,16 @@ const ChatArea = () => {
     if (text === "") return;
 
     const message = {
-      username: user.username,
+      username: user?.username || "Anonymous", // Fallback to "Anonymous"
       content: text,
       channelId: "general", // Make this dynamic
       isAnonymous: true, // This too
     };
-    
+
     // Send message to the server
     async function postMessage() {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/messages`, message);
+        const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/messages`, message);
         socket.emit('send-message', res.data); // Emit the message after successful post to DB
         setText("");
         btnChangeColor(false);
