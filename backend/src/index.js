@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-dotenv.config(); // Ensure this is at the very top
+dotenv.config();
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -10,13 +10,17 @@ import cors from 'cors';
 import messageRoutes from './routes/messageRoutes.js';
 import { connectDB } from './configs/db.js';
 import { socketManager }from './sockets/socketManager.js';
+import { clerkMiddleware } from './middlewares/clerkMiddleware.js';
+import { createAnonymousUser } from './controllers/authController.js';
 
 const app = express();
 
-// Middleware Setup
+// CORS Setup
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST'],
+  allowedHeaders: ["Authorization" ,"Content-Type"]
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,7 +29,9 @@ app.use(express.urlencoded({ extended: true }));
 connectDB();
 
 // API Routes
+// todo: Add Clerk Middleware
 app.use('/api/messages', messageRoutes);
+app.post('/api/auth/anonymous', createAnonymousUser);
 
 // Initialize Socket.IO
 const server = createServer(app);
