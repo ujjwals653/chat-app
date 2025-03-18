@@ -35,7 +35,7 @@ const ChatArea = () => {
     // Fetch messages from the server
     async function fetchMessages() {
       try {
-        const res = await axios.get("http://localhost:5000/api/messages");
+        const res = await axios.get(`${import.meta.env.BACKEND_URL}/api/message`);
         setMessages(res.data);
         console.log(res.data);
       } catch (error) {
@@ -69,7 +69,7 @@ const ChatArea = () => {
     // Send message to the server
     async function postMessage() {
       try {
-        const res = await axios.post("http://localhost:5000/api/messages", message);
+        const res = await axios.get(`${import.meta.env.BACKEND_URL}/api/message`, message);
         socket.emit('send-message', res.data); // Emit the message after successful post to DB
         setText("");
         btnChangeColor(false);
