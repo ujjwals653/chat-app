@@ -15,7 +15,7 @@ const ServerSidebar = () => {
   ];
 
   return (
-    <div className="w-20 h-full flex flex-col items-center py-3 bg-gray-950">
+    <div className="w-17 h-full flex flex-col items-center py-3 bg-gray-950">
 
       {/* Home Button */}
       <div className="flex items-center justify-center ">

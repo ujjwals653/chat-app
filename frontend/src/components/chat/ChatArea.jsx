@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Hash, AtSign, Smile, Paperclip, Gift, Send } from "lucide-react";
+import { Hash, AtSign, Smile, Paperclip, Gift, Send, Menu, Users } from "lucide-react";
 import axios from 'axios';
 import { useUserCon } from '../contexts/UserContext';
 import socket from './socket';
@@ -24,7 +24,7 @@ const ChatMessage = ({ message, newMessage }) => {
   );
 };
 
-const ChatArea = () => {
+const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSidebar }) => {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const sendbtn = useRef(null);
@@ -110,8 +110,26 @@ const ChatArea = () => {
     <div className="flex flex-col h-full">
       {/* Channel Header */}
       <div className="h-12 border-b border-gray-800 flex items-center px-4 shadow-sm">
-        <Hash size={20} className="mr-2 text-gray-400" />
+        {!showLeftSidebar && (
+          <button
+            onClick={() => setShowLeftSidebar(true)}
+            className="md:hidden p-2 text-gray-400 opacity-80 hover:opacity-100 transition-opacity"
+          >
+            <Menu size={26} />
+          </button>
+        )}
+        <Hash size={20} className="mr-1 text-gray-400" />
         <span className="font-bold">general</span>
+        <div className="ml-auto">
+          {!showMembers && (
+            <button
+              onClick={() => setShowMembers(true)}
+              className="lg:hidden p-2 text-gray-400 opacity-80 hover:opacity-100 transition-opacity"
+            >
+              <Users size={24} />
+            </button>
+          )}
+        </div>
       </div>
       
       {/* Messages Area */}
