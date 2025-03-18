@@ -4,11 +4,31 @@ import MembersSidebar from './MembersSidebar';
 import ChatArea from '../chat/ChatArea';
 import { UserProvider } from '../contexts/UserContext';
 import { useAuth } from '@clerk/clerk-react';
+import { useEffect } from 'react';
 
 const MainLayout = () => {
-  const { isLoaded } = useAuth();
+  const { getToken } = useAuth();
 
-  if (!isLoaded) return <div>Loading...</div>;
+  async function setTokentoStorage() {
+    try {
+      const token = await getToken();
+      if (token) {
+        try {
+          localStorage.setItem('authToken', token);
+          console.log("Token stored successfully: ", token);  
+        } catch (error) {
+          console.log("LocalStorage Error: ", error);
+        }
+      }
+      
+    } catch (error) {
+      console.error("Error getting token: ", error);
+    }
+  }
+
+  useEffect(() => {
+    setTokentoStorage();
+  }, [getToken]);
 
   return (
     <div className="flex h-screen w-full bg-gray-900 text-gray-100">
