@@ -30,7 +30,7 @@ const SignUpPage = () => {
 
   const handleAnonymousLogin = async () => {
     try {
-      const response = await axios.post(`${import.meta.env.BACKEND_URL}/api/message`);
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/anonymous`);
       const { email, password } = response.data;
 
       handleAnonymousSignin(email, password);
