@@ -1,8 +1,62 @@
-import { SignUpButton } from "@clerk/clerk-react"
+import { SignUpButton, useSignIn } from "@clerk/clerk-react"
 import { Button } from "../ui/button"
 import { MailOpen } from "lucide-react"
+import { useState } from "react"
+import axios from "axios"
 
 const SignUpPage = () => {
+  const [failCounter, setFailCounter] = useState(0);
+  const { signIn, setActive } = useSignIn();
+
+  const handleAnonymousSignin = async (email, password) => {
+    
+
+    try {
+      const signInAttemp = await signIn.create({
+        identifier: email,
+        password: password,
+      });
+
+      if (signInAttemp.status === 'complete') {
+        await setActive({ session: signInAttemp.createdSessionId });
+        console.log("Sign in Successfull.");
+      } else {
+        console.log("Status: ", signInAttemp.status);
+      }
+    } catch (error) {
+      console.error("Error Signing in guest user: ", error);
+    }
+  }
+
+  const handleAnonymousLogin = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/anonymous');
+      const { email, password } = response.data;
+
+      handleAnonymousSignin(email, password);
+
+      // localStorage.setItem('authToken', response.data.token);
+      // localStorage.setItem('email', email);
+      // localStorage.setItem('userId', userId);
+      // localStorage.setItem('isAnonymous', 'true');
+
+      // window.location.href = '/chat';
+    } catch (error) {
+      console.log("Getting anonymous data server failed: ", error);
+      if (failCounter === 0) {
+        alert("Well, that didn't work try again maybe?");
+        setFailCounter(failCounter + 1);
+      } else if (failCounter === 1) {
+        alert("Once More?");
+        setFailCounter(failCounter + 1);
+      } else if (failCounter === 2) {
+        alert("ok, you can leave.")
+        setFailCounter(failCounter + 1);
+      } else {
+        alert("Something is broken (check the logs).");
+      }
+    }
+  }
 
   return (
     <div className="lg:p-32 max-md:p-10 p-5 flex items-center justify-center h-screen bg-[#1f1f23]">
@@ -16,7 +70,7 @@ const SignUpPage = () => {
             </svg>
         </button>
       </SignUpButton>
-        <Button variant="ghost" className="text-gray-400 hover:text-gray-200">
+        <Button variant="ghost" className="text-gray-400 hover:text-gray-200" onClick={handleAnonymousLogin}>
           Sign in Anonymously            
         </Button>
       </div>
