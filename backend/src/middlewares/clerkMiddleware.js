@@ -1,7 +1,7 @@
 import { Clerk } from '@clerk/clerk-sdk-node'
 import { configDotenv } from 'dotenv';
 configDotenv();
-const clerk = new Clerk({secretKey: process.env.CLERK_SECRET_KEY});
+const clerk = new Clerk({ secretKey: process.env.CLERK_SECRET_KEY });
 
 // Middleware to authenticate and identify users using Clerk
 export const clerkMiddleware = async (req, res, next) => {
@@ -15,7 +15,7 @@ export const clerkMiddleware = async (req, res, next) => {
         // Verify session
         try {
             const session = await clerk.sessions.getSession(token);
-            // We are setting the below items in req 
+            // We are setting the below items in req object directly
             req.user = session.userId;
             req.isAnonymous = false;
             next(); // next() is to proceed to the messageRoutes
@@ -30,6 +30,7 @@ export const clerkMiddleware = async (req, res, next) => {
                 console.log("Invalid token error: ", error);
                 return res.status(401).json({ error: 'Invalid authentication token', token: token });
             }
+            console.log('Session Error: ', InnerError);
         }
     } catch (error) {
         console.log("Authentication Error: ", error);

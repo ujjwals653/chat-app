@@ -1,10 +1,10 @@
 import { socketAuthMiddleware } from "../middlewares/socketAuthMiddleware.js";
 
 export const socketManager = (io) => {
-  io.use(socketAuthMiddleware);
+  // io.use(socketAuthMiddleware); // Fix this
 
   io.on('connection', (socket) => {
-      console.log(`User connected: ${socket.user.id}, (Anonymous: ${socket.user.isAnonymous})`);
+      console.log(`User connected: ${socket.id}, (Anonymous: ${socket.isAnonymous})`);
     
       socket.on('send-message', (message) => {
         console.log(message);
