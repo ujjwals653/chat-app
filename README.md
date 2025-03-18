@@ -1,2 +1,2 @@
 # Chat App
-A basic chat app with user authentication using Clerk.
+A discord like chat app with user authentication using Clerk.
