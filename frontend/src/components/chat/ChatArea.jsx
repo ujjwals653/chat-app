@@ -63,6 +63,7 @@ const ChatArea = () => {
       username: user.username,
       content: text,
       channelId: "general", // Make this dynamic
+      isAnonymous: true, // This too
     };
     
     // Send message to the server
@@ -134,7 +135,7 @@ const ChatArea = () => {
             />
           </form>
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2 text-gray-400">
-            <div className='rounded-full p-2 transition' ref={sendbtn}>
+            <div className='rounded-full p-2 transition' ref={sendbtn} onClick={handleSubmit}>
               <Send size={20} className="cursor-pointer hover:text-gray-200"/>
             </div>
             <Paperclip size={20} className="cursor-pointer hover:text-gray-200" />

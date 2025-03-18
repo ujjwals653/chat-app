@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
     "cors": "^2.8.5",
