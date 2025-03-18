@@ -5,7 +5,7 @@ import { io } from 'socket.io-client';
 axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
 
 // For socket.io
-const socket = io('http://localhost:5000', {
+const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000', {
     auth: {
       token: localStorage.getItem('authToken') // Same token used for HTTP requests
     }

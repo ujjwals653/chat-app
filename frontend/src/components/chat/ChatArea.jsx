@@ -35,7 +35,8 @@ const ChatArea = () => {
     // Fetch messages from the server
     async function fetchMessages() {
       try {
-        const res = await axios.get(`${import.meta.env.BACKEND_URL}/api/message`);
+        console.log(`${import.meta.env.VITE_BACKEND_URL}/api/messages`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/messages`);
         setMessages(res.data);
         console.log(res.data);
       } catch (error) {
@@ -69,7 +70,7 @@ const ChatArea = () => {
     // Send message to the server
     async function postMessage() {
       try {
-        const res = await axios.get(`${import.meta.env.BACKEND_URL}/api/message`, message);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/messages`, message);
         socket.emit('send-message', res.data); // Emit the message after successful post to DB
         setText("");
         btnChangeColor(false);
@@ -126,7 +127,7 @@ const ChatArea = () => {
       {/* Message Input */}
       <div className="px-4 py-4">
         <div className="relative">
-          <form method='post' action='http://localhost:5000/api/messages' onSubmit={handleSubmit}>
+          <form method='post' onSubmit={handleSubmit}>
             <Input
               placeholder="Message #general" 
               className="bg-gray-700 border-none text-gray-200 px-4 pr-32 py-6"
