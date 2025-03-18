@@ -1,5 +1,5 @@
 import { Clerk } from '@clerk/clerk-sdk-node'
-const clerk = new Clerk({ apiKey: 'sk_test_IkizjKYuh7qOQ7HzN1ZuNmjacHXMLWfSRfYn6lRtjC' });
+const clerk = new Clerk({ secretKey: process.env.CLERK_SECRET_KEY });
 
 // Function to generate anonymous user using clerk
 export const createAnonymousUser = async (req, res) => {
