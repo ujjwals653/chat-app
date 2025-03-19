@@ -12,6 +12,7 @@ import { connectDB } from './configs/db.js';
 import { socketManager }from './sockets/socketManager.js';
 import { clerkMiddleware } from './middlewares/clerkMiddleware.js';
 import { createAnonymousUser } from './controllers/authController.js';
+import { clerkGetUsers } from './controllers/clerkController.js';
 
 const app = express();
 
@@ -32,6 +33,7 @@ connectDB();
 // todo: Add Clerk Middleware
 app.use('/api/messages', messageRoutes);
 app.post('/api/auth/anonymous', createAnonymousUser);
+app.get('/api/users', clerkGetUsers);
 
 // Initialize Socket.IO
 const server = createServer(app);

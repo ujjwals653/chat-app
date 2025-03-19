@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Hash, AtSign, Smile, Paperclip, Gift, Send, Menu, Users } from "lucide-react";
+import { Hash, AtSign, Smile, Paperclip, Gift, Send, Menu, Users, Loader2 } from "lucide-react";
 import axios from 'axios';
 import { useUserCon } from '../contexts/UserContext';
 import socket from './socket';
@@ -24,9 +24,19 @@ const ChatMessage = ({ message, newMessage }) => {
   );
 };
 
+// Loading component
+const LoadingScreen = () => {
+  return (
+    <div className="flex-1 flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+    </div>
+  );
+};
+
 const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSidebar }) => {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const sendbtn = useRef(null);
   const scrollAreaRef = useRef(null);
   const {user} = useUserCon();
@@ -35,12 +45,14 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
     // Fetch messages from the server
     async function fetchMessages() {
       try {
-        console.log(`${import.meta.env.VITE_BACKEND_URL}/api/messages`);
+        setIsLoading(true);
         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/messages`);
         setMessages(res.data);
+        setIsLoading(false);
         console.log(res.data);
       } catch (error) {
         console.error("Error in fetching messages: ", error);
+        setIsLoading(false);
       }
     }
     fetchMessages();
@@ -134,11 +146,17 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
       
       {/* Messages Area */}
       <ScrollArea className="flex-1 rotate-180 overflow-y-scroll">
-        <div className="py-4 flex flex-col justify-end rotate-180" ref={scrollAreaRef}>
-          {messages.map((message, i) => (
-            <ChatMessage key={message._id} message={message} newMessage={(i+1) === messages.length} />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="rotate-180">
+            <LoadingScreen />
+          </div>
+        ) : (
+          <div className="py-4 flex flex-col justify-end rotate-180" ref={scrollAreaRef}>
+            {messages.map((message, i) => (
+              <ChatMessage key={message._id} message={message} newMessage={(i+1) === messages.length} />
+            ))}
+          </div>
+        )}
         <ScrollBar orientation='vertical' />
       </ScrollArea>
       
@@ -147,14 +165,15 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
         <div className="relative">
           <form method='post' onSubmit={handleSubmit}>
             <Input
-              placeholder="Message #general" 
+              placeholder={isLoading ? "Loading messages..." : "Message #general"} 
               className="bg-gray-700 border-none text-gray-200 px-4 pr-32 py-6"
               value={text}
               onChange={(e) => handleChange(e)}
+              disabled={isLoading}
             />
           </form>
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2 text-gray-400">
-            <div className='rounded-full p-2 transition' ref={sendbtn} onClick={handleSubmit}>
+            <div className={`rounded-full p-2 transition ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`} ref={sendbtn} onClick={!isLoading ? handleSubmit : undefined}>
               <Send size={20} className="cursor-pointer hover:text-gray-200"/>
             </div>
             <Paperclip size={20} className="cursor-pointer hover:text-gray-200" />
