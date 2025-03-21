@@ -5,6 +5,7 @@ import ChatArea from '../chat/ChatArea';
 import { UserProvider } from '../contexts/UserContext';
 import { useAuth } from '@clerk/clerk-react';
 import { useEffect, useState } from 'react';
+import { ChannelProvider } from '../contexts/ChannelContext';
 
 const MainLayout = () => {
   const { getToken } = useAuth();
@@ -34,6 +35,7 @@ const MainLayout = () => {
 
   return (
     <div className="flex h-screen w-full bg-gray-900 text-gray-100">
+      <ChannelProvider>
       <UserProvider>
         {/* Overlays */}
         {showLeftSidebar && (
@@ -66,6 +68,7 @@ const MainLayout = () => {
           <MembersSidebar />
         </div>
       </UserProvider>
+      </ChannelProvider>
     </div>
   );
 };

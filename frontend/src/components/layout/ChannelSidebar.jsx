@@ -1,16 +1,19 @@
-import { useContext } from 'react';
+import { useEffect } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Hash, Volume2, Settings, PlusCircle, Crown, User } from "lucide-react";
 import { useUserCon } from '../contexts/UserContext';
 import { UserButton } from '@clerk/clerk-react';
+import { useChannel } from '../contexts/ChannelContext';
 
 const ChannelSidebar = () => {
+  const { selectedChannel, setSelectedChannel } = useChannel();
+
   // Dummy channel data
   const textChannels = [
-    { id: '1', name: 'general', type: 'text' },
-    { id: '2', name: 'welcome', type: 'text' },
-    { id: '3', name: 'random', type: 'text' },
+    { id: '1', name: 'welcome', type: 'text' },
+    { id: '2', name: 'general', type: 'text' },
+    { id: '3', name: 'feedback', type: 'text' },
   ];
   
   const voiceChannels = [
@@ -20,6 +23,7 @@ const ChannelSidebar = () => {
 
 
   const { user } = useUserCon();
+  useEffect(() => setSelectedChannel(textChannels[0]), [])
 
   return (
     <div className="w-60 h-full bg-gray-800 flex flex-col">
@@ -41,7 +45,12 @@ const ChannelSidebar = () => {
             {textChannels.map((channel) => (
               <div 
                 key={channel.id}
-                className="flex items-center px-2 py-1 rounded cursor-pointer text-gray-400 hover:text-white hover:bg-gray-700"
+                className={`flex items-center px-2 py-1 rounded cursor-pointer 
+                  ${selectedChannel.id === channel.id 
+                    ? 'bg-gray-700 text-white' 
+                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                  }`}
+                onClick={() => setSelectedChannel({ id: channel.id, name: channel.name })}
               >
                 <Hash size={18} className="mr-1" />
                 <span className="truncate">{channel.name}</span>
