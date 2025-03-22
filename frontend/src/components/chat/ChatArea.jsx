@@ -8,14 +8,38 @@ import socket from './socket';
 import { useChannel } from '../contexts/ChannelContext';
 import soundEffect from '../../assets/sound.mp3';
 
+// Delete confirmation prompt component
+const DeleteConfirmationPrompt = ({ onConfirm, onCancel }) => {
+  return (
+    <div className="absolute right-4 bg-gray-700 rounded px-2 py-1 flex items-center gap-2">
+      <span className="text-sm text-gray-200">Confirm delete?</span>
+      <button 
+        onClick={onConfirm}
+        className="text-green-500 hover:text-green-400 text-sm font-medium"
+        >
+        Yes
+      </button>
+      <button 
+        onClick={onCancel}
+        className="text-red-500 hover:text-red-400 text-sm font-medium"
+      >
+        No
+      </button>
+    </div>
+  );
+};
+
 // Message component
-const ChatMessage = ({ message, newMessage, currentUser }) => {
+const ChatMessage = ({ message, newMessage, currentUser, onDelete }) => {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const handleDelete = async () => {
     try {
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/messages/delete`, {
-        messageId: message.messageId
+        messageId: message.messageId,
       });
-      // Socket emit could be added here to notify other users of deletion
+      socket.emit('delete-message', { messageId: message.messageId });
+      onDelete(message.messageId);
     } catch (error) {
       console.error("Error deleting message:", error);
     }
@@ -34,17 +58,26 @@ const ChatMessage = ({ message, newMessage, currentUser }) => {
           {message.username === currentUser ?
             <span className='font-light text-indigo-300 opacity-70 underline underline-offset-3 mr-2 cursor-pointer'>You</span>
             : ''}
-          <span className="text-xs text-gray-400">{`Sent at ${message.updatedAt.slice(11, 16)}`}</span>
+          <span className="text-xs text-gray-400">{`Sent at ${message.createdAt ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Unknown time"}`}</span>
         </div>
         <p className="text-gray-200">{message.content}</p>
       </div>
       {message.username === currentUser && (
-        <button 
-          onClick={handleDelete}
-          className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
-        >
-          <Trash2 size={18} />
-        </button>
+        <>
+          {showDeleteConfirm ? (
+            <DeleteConfirmationPrompt 
+              onConfirm={handleDelete}
+              onCancel={() => setShowDeleteConfirm(false)}
+            />
+          ) : (
+            <button 
+              onClick={() => setShowDeleteConfirm(true)}
+              className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+            >
+              <Trash2 size={18} />
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -105,10 +138,16 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
       audioRef.current.play().catch(e => console.log('Audio playback failed:', e));
     };
 
+    const handleMessageDeleted = ({ messageId }) => {
+      setMessages(prev => prev.filter(msg => msg.messageId !== messageId));
+    };
+
     socket.on("receive-message", handleMessageReceive);
+    socket.on("message-deleted", handleMessageDeleted);
 
     return () => {
-        socket.off("receive-message", handleMessageReceive);
+      socket.off("receive-message", handleMessageReceive);
+      socket.off("message-deleted", handleMessageDeleted);
     };
   }, [selectedChannel.name]);
 
@@ -149,28 +188,31 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
     if (text === "" || timeoutSeconds > 0) return;
 
     const message = {
-      username: user?.username || "Anonymous", // Fallback to "Anonymous"
+      username: user?.username || "Anonymous",
       content: text,
       channelId: selectedChannel.name || ' ',
       isAnonymous: user.username.substring(0,4)=='anon' ? true : false,
       imageURL: user.imageUrl || null,
-      messageId: Math.random().toString(36).substring(2, 10), // Generate random 8-character ID
+      messageId: Math.random().toString(36).substring(2, 10),
     };
 
     // Send message to the server
     async function postMessage() {
       try {
         const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/messages`, message);
-        socket.emit('send-message', res.data); // Emit the message after successful post to DB
+        socket.emit('send-message', res.data); // Send the complete message object
         setText("");
         btnChangeColor(false);
-        startTimeout(); // Start the timeout after sending
       } catch (error) {
         console.error("Error in posting message: ", error);
       }
     }
     postMessage();
   }
+
+  const handleMessageDelete = (messageId) => {
+    setMessages(prev => prev.filter(msg => msg.messageId !== messageId));
+  };
 
   // Style management funtions
   const handleChange = (e) => {
@@ -242,7 +284,13 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
         ) : (
           <div className="py-4 flex flex-col justify-end">
             {messages.map((message, i) => (
-              <ChatMessage key={message.messageId} message={message} currentUser={user.username} newMessage={(i+1) === messages.length} />
+              <ChatMessage 
+                key={message.messageId}
+                message={message}
+                currentUser={user.username}
+                newMessage={(i+1) === messages.length}
+                onDelete={handleMessageDelete}
+              />
             ))}
           </div>
         )}
