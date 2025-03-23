@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Hash, AtSign, Smile, Paperclip, Gift, Send, Menu, Users, Loader2, Trash2 } from "lucide-react";
+import { Hash, AtSign, Smile, Paperclip, Gift, Send, Menu, Users, Loader2, Trash2, Reply } from "lucide-react";
 import axios from 'axios';
 import { useUserCon } from '../contexts/UserContext';
 import socket from './socket';
 import { useChannel } from '../contexts/ChannelContext';
-import soundEffect from '../../assets/sound.mp3';
+import soundEffect from '../../assets/sounds/recieve.mp3';
 
 // Delete confirmation prompt component
 const DeleteConfirmationPrompt = ({ onConfirm, onCancel }) => {
@@ -62,6 +62,14 @@ const ChatMessage = ({ message, newMessage, currentUser, onDelete }) => {
         </div>
         <p className="text-gray-200">{message.content}</p>
       </div>
+      {message.username !== currentUser && (
+        <button
+          onClick=''
+          className='absolute right-4 sm:opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-green-500'
+        >
+          <Reply size={20}/>
+        </button>
+      )}
       {message.username === currentUser && (
         <>
           {showDeleteConfirm ? (
@@ -72,7 +80,7 @@ const ChatMessage = ({ message, newMessage, currentUser, onDelete }) => {
           ) : (
             <button 
               onClick={() => setShowDeleteConfirm(true)}
-              className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+              className="absolute right-4 sm:opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
             >
               <Trash2 size={18} />
             </button>
