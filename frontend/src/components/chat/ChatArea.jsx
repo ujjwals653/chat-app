@@ -64,7 +64,7 @@ const ChatMessage = ({ message, newMessage, currentUser, onDelete }) => {
       </div>
       {message.username !== currentUser && (
         <button
-          onClick=''
+          onClick={() => alert("Coming soon")}
           className='absolute right-4 sm:opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-green-500'
         >
           <Reply size={20}/>
