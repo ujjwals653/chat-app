@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Hash, AtSign, Smile, Paperclip, Gift, Send, Menu, Users, Loader2, Trash2, Reply } from "lucide-react";
+import { Hash, AtSign, Smile, Paperclip, Gift, Send, Menu, Users, Loader2, Trash2, Reply, X } from "lucide-react";
 import axios from 'axios';
 import { useUserCon } from '../contexts/UserContext';
 import socket from './socket';
@@ -29,8 +29,26 @@ const DeleteConfirmationPrompt = ({ onConfirm, onCancel }) => {
   );
 };
 
+// Reply preview component
+const ReplyPreview = ({ replyTo, onCancelReply }) => {
+  if (!replyTo) return null;
+  
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 bg-gray-700/50 border-l-2 border-indigo-500">
+      <Reply size={16} className="text-gray-400" />
+      <div className="flex-1">
+        <div className="text-sm text-indigo-300">{replyTo.username}</div>
+        <div className="text-xs text-gray-400 truncate">{replyTo.content}</div>
+      </div>
+      <button onClick={onCancelReply} className="text-gray-400 hover:text-gray-200">
+        <X size={16} />
+      </button>
+    </div>
+  );
+};
+
 // Message component
-const ChatMessage = ({ message, newMessage, currentUser, onDelete }) => {
+const ChatMessage = ({ message, newMessage, currentUser, onDelete, onReply }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleDelete = async () => {
@@ -60,11 +78,19 @@ const ChatMessage = ({ message, newMessage, currentUser, onDelete }) => {
             : ''}
           <span className="text-xs text-gray-400">{`Sent at ${message.createdAt ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Unknown time"}`}</span>
         </div>
+        {message.replyTo && (
+          <div className="flex items-center gap-1 text-xs text-gray-400 mb-1">
+            <Reply size={12} />
+            <span>Replying to </span>
+            <span className="text-indigo-300">{message.replyTo.username}</span>
+            <span className="truncate">{message.replyTo.content}</span>
+          </div>
+        )}
         <p className="text-gray-200">{message.content}</p>
       </div>
       {message.username !== currentUser && (
         <button
-          onClick=''
+          onClick={() => onReply(message)}
           className='absolute right-4 sm:opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-green-500'
         >
           <Reply size={20}/>
@@ -124,6 +150,7 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
   const {user} = useUserCon();
   const audioRef = useRef(new Audio(soundEffect));
   const inputRef = useRef(null);
+  const [replyTo, setReplyTo] = useState(null);
 
   useEffect(() => {
     // Fetch messages from the server
@@ -202,6 +229,11 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
       isAnonymous: user.username.substring(0,4)=='anon' ? true : false,
       imageURL: user.imageUrl || null,
       messageId: Math.random().toString(36).substring(2, 10),
+      replyTo: replyTo ? {
+        messageId: replyTo.messageId,
+        username: replyTo.username,
+        content: replyTo.content
+      } : null
     };
 
     // Send message to the server
@@ -211,6 +243,7 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
         socket.emit('send-message', res.data); // Send the complete message object
         setText("");
         btnChangeColor(false);
+        setReplyTo(null); // Clear reply after sending
       } catch (error) {
         console.error("Error in posting message: ", error);
       }
@@ -220,6 +253,11 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
 
   const handleMessageDelete = (messageId) => {
     setMessages(prev => prev.filter(msg => msg.messageId !== messageId));
+  };
+
+  const handleReply = (message) => {
+    setReplyTo(message);
+    inputRef.current?.focus();
   };
 
   // Style management funtions
@@ -298,6 +336,7 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
                 currentUser={user.username}
                 newMessage={(i+1) === messages.length}
                 onDelete={handleMessageDelete}
+                onReply={handleReply}
               />
             ))}
           </div>
@@ -307,6 +346,7 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
       {/* Message Input */}
       <div className="px-4 py-4">
         <div className="relative">
+          <ReplyPreview replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
           <form method='post' onSubmit={handleSubmit}>
             <Input
               ref={inputRef}
