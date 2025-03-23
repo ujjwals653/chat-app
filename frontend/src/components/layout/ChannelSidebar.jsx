@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Hash, Volume2, Settings, PlusCircle, Crown, User } from "lucide-react";
+import { Hash, Volume2, Settings, PlusCircle, Crown, User, Mic, MicOff, SignalHigh } from "lucide-react";
 import { useUserCon } from '../contexts/UserContext';
 import { UserButton } from '@clerk/clerk-react';
 import { useChannel } from '../contexts/ChannelContext';
 import AgoraRTC from 'agora-rtc-react';
 import axios from 'axios';
+import socket from '../chat/socket';
+import connectSound from '../../assets/sounds/connect.mp3';
+import leaveSound from '../../assets/sounds/leave.mp3';
 
 const ChannelSidebar = () => {
   // Dummy channel data
@@ -21,101 +24,146 @@ const ChannelSidebar = () => {
     { id: '2', name: 'Gaming', type: 'voice' },
   ];
 
-  const audioTracks = { localaudiotrack : null, remoteAudioTracks: {} };
   const [ joinedUsers, setJoinedUsers ] = useState([]);
   const { selectedChannel, setSelectedChannel } = useChannel();
   const [ selectedVoiceCh, setSelectedVoiceCh ] = useState(voiceChannels[0].name);
   const [ joined, setJoined ] = useState(false);
-  const [ token, setToken ] = useState('');
   const { user } = useUserCon();
-  const rtcClient = AgoraRTC.createClient({mode: 'rtc', codec: 'vp8'});
+  const [isMuted, setIsMuted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [audioTracks, setAudioTracks] = useState({
+    localTrack: null,
+    remoteTracks: {},
+  });
+  const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+  const connectAudio = new Audio(connectSound);
+  const leaveAudio = new Audio(leaveSound);
 
+  // Socket Config
   useEffect(() => {
     if (textChannels.length > 0) {
       setSelectedChannel(textChannels[0]);
     }
+
+    const handleVoiceJoin = (remoteUsers) => {
+      setJoinedUsers(remoteUsers);
+    }
+  
+    const handleVoiceLeft = ({ username }) => {
+      setAudioTracks(prev => ({
+        ...prev,
+        remoteTracks: Object.fromEntries(
+          Object.entries(prev.remoteTracks).filter(([key]) => key !== uid.toString())
+        )
+      }));
+      setJoinedUsers(prev => prev.filter(u => u.username !== username));
+    }
+
+    const handleVoicePublished = async (user, mediaType) => {
+      await client.subscribe(user, mediaType);
+      console.log("user joined: ", user);
+      if (mediaType === "audio") {
+        setAudioTracks(prev => ({
+          ...prev,
+          remoteTracks: {
+            ...prev.remoteTracks,
+            [user.uid]: [user.audioTrack]
+          }
+        }));
+        user.audioTrack.play();
+      }
+    }
+    
+    socket.on('user-voice-join', handleVoiceJoin);
+    socket.on('user-voice-left', handleVoiceLeft);
+    client.on("user-published", handleVoicePublished);
+    client.on("user-left", handleVoiceLeft);
+
+    return () => {
+      socket.off('user-voice-join', handleVoiceJoin);
+      socket.off('user-voice-left', handleVoiceLeft);
+      client.off("user-published", handleVoicePublished);
+      client.off("user-left", handleVoiceLeft);
+    };
   }, []);
-  // Agora config
+
+  useEffect(() => {
+    if (client && audioTracks.localTrack) {
+      audioTracks.localTrack.setMuted(isMuted);
+    }
+  }, [isMuted]);
+
   const joinChannel = async (channelName) => {
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/agora`, { channelName, username: user.username, imageUrl: user.imageUrl });
-      const { token, uid, imageUrl } = res.data;
+      setIsLoading(true);
       const appId = import.meta.env.VITE_AGORA_APP_ID;
-      console.warn('Voice data: ', res.data);
-      const joinRes = await rtcClient.join(appId, channelName, token, uid);
-
-      audioTracks.localaudiotrack = await AgoraRTC.createMicrophoneAudioTrack();
-      rtcClient.publish(audioTracks.localaudiotrack);
-
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/agora`, { 
+        channelName,
+        username: user.username,
+      });
+      const { token, uid } = res.data;
+      await client.join(appId, channelName, token, uid);
+      
+      const track = await AgoraRTC.createMicrophoneAudioTrack();
+      setAudioTracks(prev => ({
+        ...prev,
+        localTrack: track
+      }));
+      await client.publish(track);
+      
+      socket.emit('user-voice-join', {
+        uid: uid,
+        username: user.username,
+        imageUrl: user.imageUrl,
+        channelName: channelName
+      });
+      
       setSelectedVoiceCh(channelName);
       setJoined(true);
-      
-      // Pass current user's data when joining
-      handleUserJoined({
-        uid,
-        username: user.username,
-        imageUrl,
-      });
-
-      rtcClient.on('user-joined', (userData) => {
-        handleUserJoined(userData, imageUrl);
-      });
-      rtcClient.on('user-published', handleUserPublished);
-      rtcClient.on('user-left', handleUserLeft);
-
+      setIsLoading(false);
+      connectAudio.play();  // Play sound when connection is complete
     } catch (error) {
-      console.error("Error getting token: ", error);
+      setIsLoading(false);
+      console.error("Error joining channel: ", error);
+      alert("Failed to join voice channel. Please check console for details.");
     }
   }
 
-  const leaveChannel = () => {
-    if (audioTracks.localaudiotrack) {
-      audioTracks.localaudiotrack.stop();
-      audioTracks.localaudiotrack.close();
-    }
-    rtcClient.unpublish();
-    rtcClient.leave().then(() => {
-      rtcClient.removeAllListeners(); // Remove all event listeners
+  const leaveChannel = async () => {
+    try {
+      if (!client || !joined) {
+        console.error("Not in a channel");
+        return;
+      }
+
+      if (audioTracks.localTrack) {
+        audioTracks.localTrack.stop();
+        audioTracks.localTrack.close();
+        try {
+          await client.unpublish(audioTracks.localTrack);
+        } catch (err) {
+          console.error("Error unpublishing:", err);
+        }
+      }
+
+      try {
+        await client.leave();
+      } catch (err) {
+        console.error("Error leaving channel:", err);
+      }
+      
+      setAudioTracks(prev => ({
+        ...prev,
+        localTrack: null,
+        remoteTracks: {}
+      }));
+      socket.emit('user-voice-left', { username: user.username });
       setJoined(false);
-      setJoinedUsers(prev => prev.filter(u => u.uid !== user.id)); // Ensure user exists before filtering
-      setSelectedVoiceCh(null); // Reset selected voice channel
-    }).catch(error => {
-      console.error("Error leaving channel: ", error);
-    });
-  }
-
-  const handleUserJoined = async (userData, imageUrl) => {
-    console.log('User joined voice channel: ', userData);
-    setJoinedUsers(prev => {
-      // Avoid duplicates by checking if user already exists
-      const exists = prev.some(u => u.uid === userData.uid);
-      if (!exists) {
-        return [...prev, { ...userData, imageUrl }];
-      }
-      return prev.map(u => u.uid === userData.uid ? { ...u, ...userData } : u); // Update user data without overwriting imageUrl
-    });
-  }
-
-  const handleUserPublished = async (userData, mediaType) => {
-    await rtcClient.subscribe(userData, mediaType);
-
-    if (mediaType === 'audio') {
-      audioTracks.remoteAudioTracks[userData.uid] = [userData.audioTrack];
-      userData.audioTrack.play();
+      setSelectedVoiceCh(null);
+      leaveAudio.play();  // Play leave sound
+    } catch (error) {
+      console.error("Error in leaveChannel:", error);
     }
-    setJoinedUsers(prev => {
-      // Avoid duplicates by checking if user already exists
-      const exists = prev.some(u => u.uid === userData.uid);
-      if (!exists) {
-        return [...prev, userData];
-      }
-      return prev;
-    });
-  }
-
-  const handleUserLeft = async (userData) => {
-    delete audioTracks.remoteAudioTracks[userData.uid];
-    setJoinedUsers(prev => prev.filter(u => u.uid !== userData.uid));
   }
   
   return (
@@ -177,20 +225,22 @@ const ChannelSidebar = () => {
                           e.stopPropagation();
                           leaveChannel();
                         }}
-                        className="ml-auto text-sm mt-1 text-gray-400 hover:text-red-500 cursor-pointer"
+                        className="ml-auto text-sm mt-1 z-100 text-gray-400 hover:text-red-500 cursor-pointer"
                       >
                         Leave
                       </button>
                     )}
                   </div>
-                  {joined && selectedVoiceCh === channel.name && joinedUsers.map((user) => (
-                    <div key={user.uid} className='flex items-center px-4 py-1 text-sm text-gray-400 group-hover:text-white'>
-                    <img 
-                      src={user.imageUrl} 
-                      alt={user.username}
-                      className="w-6 h-6 rounded-full mr-2"
-                    />
-                    <span className="truncate">{user.uid}</span>
+                  {joinedUsers
+                    .filter(user => user.channelName === channel.name)
+                    .map((user) => (
+                    <div key={user.uid} className='flex items-center px-4 py-1 text-sm text-gray-400'>
+                      <img 
+                        src={user.imageUrl} 
+                        alt={user.username}
+                        className="w-6 h-6 rounded-full mr-2"
+                      />
+                      <span className="truncate">{user.username}</span>
                     </div>
                   ))}
                   </div>
@@ -199,7 +249,26 @@ const ChannelSidebar = () => {
               </div>
               </ScrollArea>
 
-              {/* User Area */}
+      {/* Voice Status */}
+      {(joined || isLoading) && (
+        <div className="h-12 bg-gray-850 border-t border-gray-700 px-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <SignalHigh size={20} strokeWidth={3} className={`mr-2 mb-1 ${isLoading ? 'text-yellow-500 animate-pulse' : 'text-green-500'}`} />
+            <span className={`text-sm ${isLoading ? 'text-yellow-500' : 'text-green-500'}`}>
+              {isLoading ? 'Connecting...' : 'Voice Connected'}
+            </span>
+          </div>
+          <button 
+            onClick={() => setIsMuted(!isMuted)} 
+            className={`text-gray-400 hover:text-white ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isLoading}
+          >
+            {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+          </button>
+        </div>
+      )}
+
+      {/* User Area */}
       <div className="h-14 bg-gray-850 px-4 flex items-center">
           <UserButton />
         <div className="flex flex-col">

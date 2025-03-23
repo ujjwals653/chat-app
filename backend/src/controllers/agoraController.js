@@ -14,13 +14,13 @@ if (!appID || !appCertificate) {
 
 export const getToken = (req, res) => {
     try {
-        const { channelName, username, imageUrl } = req.body;
+        const { channelName, username } = req.body;
 
         if (!channelName) {
             return res.status(400).json({ error: "Channel name is required" });
         }
 
-        const userId = username || 0;
+        const uid = Math.floor(Math.random()*9999);
         const currentTimestamp = Math.floor(Date.now() / 1000);
         const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
@@ -28,12 +28,12 @@ export const getToken = (req, res) => {
             appID,
             appCertificate,
             channelName,
-            userId,
+            uid,
             RtcRole.PUBLISHER,
             privilegeExpiredTs
         );
-        console.log(req.body); 
-        return res.status(200).json({ appID, token, uid: userId, channelName, imageUrl});
+        
+        return res.status(200).json({ token, uid, channelName });
     } catch (error) {
         console.error('Error generating Agora token:', error);
         return res.status(500).json({ error: "Failed to generate token" });
