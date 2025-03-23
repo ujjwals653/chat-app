@@ -13,6 +13,7 @@ import { socketManager }from './sockets/socketManager.js';
 import { clerkMiddleware } from './middlewares/clerkMiddleware.js';
 import { createAnonymousUser } from './controllers/authController.js';
 import { clerkGetUsers } from './controllers/clerkController.js';
+import { getToken } from './controllers/agoraController.js';
 
 const app = express();
 
@@ -34,6 +35,7 @@ connectDB();
 app.use('/api/messages', messageRoutes);
 app.post('/api/auth/anonymous', createAnonymousUser);
 app.get('/api/users', clerkGetUsers);
+app.post('/api/agora', getToken);
 
 // Initialize Socket.IO
 const server = createServer(app);
