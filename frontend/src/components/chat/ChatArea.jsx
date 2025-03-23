@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Hash, AtSign, Smile, Paperclip, Gift, Send, Menu, Users, Loader2, Trash2 } from "lucide-react";
+import { Hash, AtSign, Smile, Paperclip, Gift, Send, Menu, Users, Loader2, Trash2, Reply } from "lucide-react";
 import axios from 'axios';
 import { useUserCon } from '../contexts/UserContext';
 import socket from './socket';
@@ -38,6 +38,14 @@ const ChatMessage = ({ message, newMessage, currentUser }) => {
         </div>
         <p className="text-gray-200">{message.content}</p>
       </div>
+      {message.username !== currentUser && (
+        <button
+          onClick={() => alert("Coming soon")}
+          className='absolute right-4 sm:opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-green-500'
+        >
+          <Reply size={20}/>
+        </button>
+      )}
       {message.username === currentUser && (
         <button 
           onClick={handleDelete}
