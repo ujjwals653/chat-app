@@ -10,6 +10,13 @@ import axios from 'axios';
 import socket from '../chat/socket';
 import connectSound from '../../assets/sounds/connect.mp3';
 import leaveSound from '../../assets/sounds/leave.mp3';
+import muteSound from '../../assets/sounds/mute.mp3'; 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const ChannelSidebar = () => {
   // Dummy channel data
@@ -24,7 +31,6 @@ const ChannelSidebar = () => {
     { id: '2', name: 'Gaming', type: 'voice' },
   ];
 
-  // Use a ref for audio tracks to avoid issues with React state updates
   const audioTracksRef = useRef({
     localTrack: null,
     remoteTracks: {}
@@ -37,11 +43,40 @@ const ChannelSidebar = () => {
   const { user } = useUserCon();
   const [isMuted, setIsMuted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasMicPermission, setHasMicPermission] = useState(null);
   
-  // Create client outside state to avoid recreation
   const clientRef = useRef(null);
   const connectAudio = new Audio(connectSound);
   const leaveAudio = new Audio(leaveSound);
+  const muteAudio = new Audio(muteSound);
+  
+  const [showTextTooltip, setShowTextTooltip] = useState(false);
+  const [showVoiceTooltip, setShowVoiceTooltip] = useState(false);
+
+  const handleTextPlusClick = (e) => {
+    e.stopPropagation();
+    setShowTextTooltip(true);
+    setTimeout(() => setShowTextTooltip(false), 2000);
+  };
+
+  const handleVoicePlusClick = (e) => {
+    e.stopPropagation();
+    setShowVoiceTooltip(true);
+    setTimeout(() => setShowVoiceTooltip(false), 2000);
+  };
+
+  const toggleMute = async () => {
+    try {
+      if (!audioTracksRef.current.localTrack || !joined) return;
+      
+      const newMuteState = !isMuted;
+      await audioTracksRef.current.localTrack.setMuted(newMuteState);
+      setIsMuted(newMuteState);
+      muteAudio.play();
+    } catch (error) {
+      console.error("Error toggling mute:", error);
+    }
+  };
 
   useEffect(() => {
     // Initialize client once
@@ -110,8 +145,27 @@ const ChannelSidebar = () => {
     }
   };
 
+  const checkMicPermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      setHasMicPermission(true);
+      return true;
+    } catch (error) {
+      console.error("Microphone permission denied:", error);
+      setHasMicPermission(false);
+      return false;
+    }
+  };
+
   const joinChannel = async (channelName) => {
     try {
+      const hasPermission = await checkMicPermission();
+      if (!hasPermission) {
+        alert("Microphone permission is required to join voice channels");
+        return;
+      }
+
       setIsLoading(true);
       
       // Get a random UID to avoid conflicts
@@ -218,7 +272,16 @@ const ChannelSidebar = () => {
           <div className="mb-2">
             <div className="flex items-center justify-between px-2 text-xs uppercase font-semibold text-gray-400 mb-1">
               <span>Text Channels</span>
-              <PlusCircle size={16} className="cursor-pointer hover:text-white hover:bg-gray-400" />
+              <TooltipProvider>
+                <Tooltip open={showTextTooltip}>
+                  <TooltipTrigger onClick={handleTextPlusClick}>
+                    <PlusCircle size={16} className="cursor-pointer rounded-full hover:text-white hover:bg-gray-400" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Coming not so soon</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             
             {textChannels.map((channel) => (
@@ -241,7 +304,19 @@ const ChannelSidebar = () => {
           <div className="mb-2">
             <div className="flex items-center justify-between px-2 text-xs uppercase font-semibold text-gray-400 mb-1">
               <span>Voice Channels</span>
-              <PlusCircle size={16} className="cursor-pointer hover:text-white hover:bg-gray-700" />
+              {hasMicPermission === false && (
+                <span className="text-red-500 text-xs">No mic access</span>
+              )}
+              <TooltipProvider>
+                <Tooltip open={showVoiceTooltip}>
+                  <TooltipTrigger onClick={handleVoicePlusClick}>
+                    <PlusCircle size={16} className="cursor-pointer rounded-full hover:text-white hover:bg-gray-700" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Coming not so soon</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             
             {voiceChannels.map((channel) => (
@@ -297,8 +372,9 @@ const ChannelSidebar = () => {
             </span>
           </div>
           <button 
-            onClick={() => setIsMuted(!isMuted)} 
-            className={`text-gray-400 hover:text-white ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={toggleMute} 
+            className={`text-gray-400 hover:text-white ${isLoading ? 'opacity-50 cursor-not-allowed' : ''} 
+              ${isMuted ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400' : ''}`}
             disabled={isLoading}
           >
             {isMuted ? <MicOff size={18} /> : <Mic size={18} />}

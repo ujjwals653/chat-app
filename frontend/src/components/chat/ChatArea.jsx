@@ -100,6 +100,15 @@ const LoadingScreen = () => {
   );
 };
 
+// Error message component
+const ErrorMessage = () => {
+  return (
+    <div className="flex-1 flex items-center justify-center text-red-500">
+      Error getting messages from the server
+    </div>
+  );
+};
+
 // Welcome component
 const WelcomeScreen = ({ channelName }) => {
   return (
@@ -119,6 +128,7 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
   const [text, setText] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [timeoutSeconds, setTimeoutSeconds] = useState(0);
+  const [error, setError] = useState(false);
   const sendbtn = useRef(null);
   const scrollAreaRef = useRef(null);
   const {user} = useUserCon();
@@ -130,6 +140,7 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
     async function fetchMessages() {
       try {
         setIsLoading(true);
+        setError(false);
         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/messages?channel=${selectedChannel.name}`);
         setMessages(res.data);
         setIsLoading(false);
@@ -137,6 +148,7 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
       } catch (error) {
         console.error("Error in fetching messages: ", error);
         setIsLoading(false);
+        setError(true);
       }
     }
     fetchMessages();
@@ -289,6 +301,8 @@ const ChatArea = ({ showMembers, setShowMembers, showLeftSidebar, setShowLeftSid
           <div className="rotate-180">
             <LoadingScreen />
           </div>
+        ) : error ? (
+          <ErrorMessage />
         ) : (
           <div className="py-4 flex flex-col justify-end">
             {messages.map((message, i) => (
